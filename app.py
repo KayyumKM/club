@@ -9,12 +9,12 @@ app = Flask(__name__)
 CORS(app)
 app.secret_key = os.getenv("SECRET_KEY", "defaultsecretkey")
 
-# Admin credentials and secret code (read from environment)
+# Admin credentials and secret code (from environment)
 SECRET_CODE = os.getenv("SECRET_CODE", "Amity@Cyber_2024")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Cyber@Admin123")
 
-# Directories for forms and responses
+# Directory setup
 FORMS_DIR = 'forms'
 RESPONSES_DIR = 'responses'
 os.makedirs(FORMS_DIR, exist_ok=True)
@@ -27,6 +27,7 @@ def home():
     return render_template("index.html")
 
 # ------------------------ AUTH ------------------------
+
 @app.route('/check_secret_code', methods=['POST'])
 def check_secret_code():
     data = request.get_json()
@@ -55,6 +56,7 @@ def admin_dashboard():
     return render_template("admin_dashboard.html")
 
 # ------------------------ FORM CREATION ------------------------
+
 @app.route('/create_form', methods=['GET', 'POST'])
 def create_form():
     if not session.get('admin_logged_in'):
@@ -82,6 +84,7 @@ def create_form():
     return render_template("create_form.html")
 
 # ------------------------ USER FORM ROUTES ------------------------
+
 @app.route('/get_form/<form_id>')
 def get_form(form_id):
     form_path = os.path.join(FORMS_DIR, f"{form_id}.json")
@@ -107,6 +110,8 @@ def user_form(form_id):
         form_data = json.load(f)
     return render_template("user_form.html", form=form_data, questions=form_data.get("questions", []))
 
+# ------------------------ FORM SUBMISSION & SCORING ------------------------
+
 @app.route('/submit_form/<form_id>', methods=['POST'])
 def submit_form(form_id):
     form_path = os.path.join(FORMS_DIR, f"{form_id}.json")
@@ -129,29 +134,40 @@ def submit_form(form_id):
         base_field = f'question_{qid}'
         total += marks
 
+        # Case 1: MCQ with Checkboxes
         if qtype == "mcq" and input_style == "checkbox":
             user_ans = form_answers.getlist(base_field)
+            cleaned_user = sorted([a.strip().lower() for a in user_ans])
             answers[qid] = user_ans
-            if sorted([a.lower() for a in user_ans]) == sorted(correct):
+            if cleaned_user == sorted(correct):
                 score += marks
+
+        # Case 2: MCQ with Radio
         elif qtype == "mcq":
             user_ans = form_answers.get(base_field, "").strip().lower()
             answers[qid] = user_ans
             if user_ans in correct:
                 score += marks
-        elif qtype in ["checkbox"]:
+
+        # Case 3: Generic Checkbox question
+        elif qtype == "checkbox":
             user_ans = form_answers.getlist(base_field)
+            cleaned_user = sorted([a.strip().lower() for a in user_ans])
             answers[qid] = user_ans
-            if sorted([a.lower() for a in user_ans]) == sorted(correct):
+            if cleaned_user == sorted(correct):
                 score += marks
+
+        # Case 4: Short answer / Text
         elif qtype in ["short", "text"]:
             user_ans = form_answers.get(base_field, "").strip().lower()
             answers[qid] = user_ans
             if user_ans in correct:
                 score += marks
+
         else:
             answers[qid] = "Unknown question type"
 
+    # Save response
     response_id = str(uuid.uuid4())
     response_data = {
         'response_id': response_id,
@@ -167,6 +183,7 @@ def submit_form(form_id):
     return render_template("submit_form.html", score=score, total=total)
 
 # ------------------------ ADMIN VIEW ------------------------
+
 @app.route('/view_forms')
 def view_forms():
     if not session.get('admin_logged_in'):
