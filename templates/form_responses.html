@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📝 Form Responses - {{ form_id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: white;
+            padding: 30px;
+        }
+        h1 {
+            color: #38bdf8;
+            margin-bottom: 30px;
+        }
+        .response-block {
+            background-color: #1e293b;
+            border-left: 5px solid #38bdf8;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        .back {
+            margin-top: 30px;
+        }
+        a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .timestamp {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Responses for Form ID: {{ form_id }}</h1>
+
+    {% if responses %}
+        {% for response in responses %}
+            <div class="response-block">
+          
+                <p><strong>Answers:</strong></p>
+                <div>
+                    {% for qid, ans in response['answers'].items() %}
+                        <p><strong>{{ qid }}:</strong>
+                            {% if ans is iterable and ans is not string %}
+                                {{ ", ".join(ans) }}
+                            {% else %}
+                                {{ ans }}
+                            {% endif %}
+                        </p>
+                    {% endfor %}
+                </div>
+                <p class="timestamp"><strong>Score:</strong> {{ response['score'] }}</p>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No responses found for this form.</p>
+    {% endif %}
+
+    <div class="back">
+        <a href="{{ url_for('view_forms') }}">← Back to all forms</a>
+    </div>
+</body>
+</html>

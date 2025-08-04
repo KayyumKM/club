@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ form.title if form else 'Answer Form' }}</title>
+  <style>
+    body {
+      background-color: #f4f4f4;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .question-container {
+      display: none;
+    }
+    .question-container.active {
+      display: block;
+    }
+    .option {
+      margin: 8px 0;
+    }
+    .submit-btn, .next-btn, .start-btn {
+      display: block;
+      margin: 30px auto 10px;
+      padding: 10px 30px;
+      font-size: 16px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .note {
+      text-align: center;
+      font-size: 14px;
+      color: #aa0000;
+      margin-bottom: 20px;
+    }
+    .error {
+      color: red;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .start-screen {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  {% if error %}
+    <h2 class="error">{{ error }}</h2>
+
+  {% elif form and questions %}
+    <div class="start-screen" id="startScreen">
+      <h1>{{ form.title }}</h1>
+      <p class="note"><strong>⚠️ Once you move to the next question, you cannot go back. Please answer carefully.</strong></p>
+      <button class="start-btn" onclick="startForm()">Start</button>
+    </div>
+
+    <form method="POST" action="{{ url_for('submit_form', form_id=form.id) }}" id="questionForm">
+      {% for question in questions %}
+        {% set qid = question.id %}
+        {% set required = question.get('required', False) %}
+        {% set field_name = 'question_' ~ qid %}
+        {% set qtype = question.type.lower() %}
+        {% set options = question.options %}
+        {% set input_style = question.input_style if question.input_style else 'radio' %}
+
+        <div class="question-container" id="q{{ loop.index0 }}">
+          <h2>Q{{ loop.index }}. {{ question.text }}</h2>
+
+          {% if qtype == 'mcq' and options %}
+            {% for key, option in options.items() %}
+              <div class="option">
+                <input
+                  type="{{ input_style }}"
+                  id="{{ field_name }}_{{ loop.index }}"
+                  name="{{ field_name }}{% if input_style == 'checkbox' %}[]{% endif %}"
+                  value="{{ option }}"
+                  {% if input_style == 'radio' and required %}required{% endif %}
+                >
+                <label for="{{ field_name }}_{{ loop.index }}">{{ option }}</label>
+              </div>
+            {% endfor %}
+            {% if required and input_style == 'checkbox' %}
+              <input type="hidden" class="required-checkbox" data-name="{{ field_name }}">
+            {% endif %}
+
+          {% elif qtype == 'text' or qtype == 'short' %}
+            <input
+              type="text"
+              name="{{ field_name }}"
+              style="width: 100%; padding: 8px;"
+              placeholder="Your answer..."
+              {% if required %}required{% endif %}
+            >
+
+          {% else %}
+            <p class="error">⚠️ Unknown question type: "{{ question.type }}"</p>
+          {% endif %}
+
+          {% if not loop.last %}
+            <button type="button" class="next-btn" onclick="nextQuestion({{ loop.index0 }})">Next</button>
+          {% else %}
+            <button type="submit" class="submit-btn">Submit</button>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </form>
+  {% else %}
+    <h2>Loading...</h2>
+    <p class="error">Error loading form. Please try again later.</p>
+  {% endif %}
+</div>
+
+<script>
+  let current = -1;
+  const questions = document.querySelectorAll('.question-container');
+  const startScreen = document.getElementById('startScreen');
+
+  function startForm() {
+    startScreen.style.display = "none";
+    current = 0;
+    questions[current].classList.add('active');
+  }
+
+  function nextQuestion(index) {
+    const currentQ = questions[index];
+    const inputs = currentQ.querySelectorAll('input');
+    let valid = false;
+
+    // Required checkbox handling
+    const checkboxRequired = currentQ.querySelector('.required-checkbox');
+    if (checkboxRequired) {
+      const name = checkboxRequired.dataset.name;
+      const selected = currentQ.querySelectorAll(`input[name="${name}[]"]:checked`);
+      if (selected.length === 0) {
+        alert("This question is required. Please select at least one option.");
+        return;
+      }
+    }
+
+    for (const input of inputs) {
+      if (input.type === 'radio') {
+        const radios = currentQ.querySelectorAll(`input[name="${input.name}"]`);
+        const isAnyChecked = [...radios].some(r => r.checked);
+        if (input.required && !isAnyChecked) {
+          alert("Please select one option.");
+          return;
+        }
+      }
+      if (input.type === 'text' && input.required && input.value.trim() === "") {
+        alert("Please fill the required text field.");
+        return;
+      }
+    }
+
+    currentQ.classList.remove('active');
+    if (index + 1 < questions.length) {
+      questions[index + 1].classList.add('active');
+    }
+  }
+
+  // Block Enter from submitting prematurely
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const btn = document.querySelector('.question-container.active .next-btn');
+      if (btn) btn.click();
+    }
+  });
+</script>
+
+</body>
+</html>

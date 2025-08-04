@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Thank You</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    .container {
+      background-color: #1f1f1f;
+      padding: 30px;
+      border-radius: 10px;
+      display: inline-block;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+    h1 {
+      color: #00ff99;
+    }
+    p {
+      font-size: 18px;
+    }
+    .score {
+      font-size: 24px;
+      color: #00ccff;
+      margin-top: 20px;
+    }
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      color: #ffffff;
+      background-color: #00ccff;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+    a:hover {
+      background-color: #0099cc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎉 Thank You!</h1>
+    <p>Your responses have been recorded successfully.</p>
+    <div class="score">Your Score: <strong>{{ score }}</strong></div>
+    <a href="/">Return to Home</a>
+  </div>
+</body>
+</html>

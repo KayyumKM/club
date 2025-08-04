@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Form</title>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .form-group {
+      background-color: #1e293b;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    button {
+      padding: 12px 25px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      display: block;
+      margin: 20px auto;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .checkbox-label {
+      font-weight: normal;
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .checkbox-label input {
+      width: auto;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Create a New Form</h1>
+
+  <label for="formTitle">Form Title:</label>
+  <input type="text" id="formTitle" placeholder="Enter form title">
+
+  <div id="questionContainer"></div>
+
+  <button onclick="addQuestion()">➕ Add Question</button>
+  <button onclick="submitForm()">✅ Submit Form</button>
+
+  <script>
+    let questionCount = 0;
+
+    function addQuestion() {
+      questionCount++;
+      const container = document.getElementById("questionContainer");
+      const div = document.createElement("div");
+      div.className = "form-group";
+      div.id = `question-${questionCount}`;
+      div.innerHTML = `
+        <label>Question ${questionCount}</label>
+        <input type="text" placeholder="Enter question" class="question-text" required>
+
+        <label>Type:</label>
+        <select class="question-type" onchange="toggleOptions(${questionCount}, this.value)">
+          <option value="mcq">Multiple Choice</option>
+          <option value="text">Text Input</option>
+        </select>
+
+        <div class="options-group" id="options-${questionCount}">
+          <label>Input Style:</label>
+          <select class="input-style">
+            <option value="radio">Radio (Single Answer)</option>
+            <option value="checkbox">Checkbox (Multiple Answers)</option>
+          </select>
+
+          <label>Option A:</label><input type="text" class="optionA"><br>
+          <label>Option B:</label><input type="text" class="optionB"><br>
+          <label>Option C:</label><input type="text" class="optionC"><br>
+          <label>Option D:</label><input type="text" class="optionD"><br>
+
+          <label>Correct Answer:</label>
+          <select class="correct-option" multiple size="4">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+          <small>(Hold Ctrl or Cmd to select multiple)</small>
+        </div>
+
+        <label>Marks:</label>
+        <input type="number" class="question-marks" placeholder="Optional: Enter marks">
+
+        <label class="checkbox-label">
+          <input type="checkbox" class="question-required">
+          Required question (must be answered)
+        </label>
+      `;
+      container.appendChild(div);
+    }
+
+    function toggleOptions(id, type) {
+      const optionsDiv = document.getElementById(`options-${id}`);
+      optionsDiv.style.display = (type === "text") ? "none" : "block";
+
+      if (type === "text") {
+        const group = document.getElementById(`question-${id}`);
+        group.querySelector(".optionA").value = "";
+        group.querySelector(".optionB").value = "";
+        group.querySelector(".optionC").value = "";
+        group.querySelector(".optionD").value = "";
+        const correctSelect = group.querySelector(".correct-option");
+        Array.from(correctSelect.options).forEach(opt => opt.selected = false);
+      }
+    }
+
+    function getSelectedValues(selectElement) {
+      const selected = [];
+      for (let option of selectElement.options) {
+        if (option.selected) {
+          selected.push(option.value);
+        }
+      }
+      return selected;
+    }
+
+    function submitForm() {
+      const title = document.getElementById("formTitle").value.trim();
+      if (!title) {
+        alert("Form title is required.");
+        return;
+      }
+
+      const questionElements = document.querySelectorAll(".form-group");
+      const questions = [];
+      let hasEmptyRequired = false;
+
+      questionElements.forEach((group, index) => {
+        const questionText = group.querySelector(".question-text").value.trim();
+        const questionType = group.querySelector(".question-type").value;
+        const marks = group.querySelector(".question-marks").value;
+        const isRequired = group.querySelector(".question-required").checked;
+
+        if (isRequired && !questionText) {
+          hasEmptyRequired = true;
+        }
+
+        let question = {
+          id: `q${index + 1}`,
+          text: questionText,
+          type: questionType,
+          required: isRequired
+        };
+
+        if (marks !== "") {
+          question.marks = parseInt(marks);
+        }
+
+        if (questionType === "mcq") {
+          const options = {
+            A: group.querySelector(".optionA").value.trim(),
+            B: group.querySelector(".optionB").value.trim(),
+            C: group.querySelector(".optionC").value.trim(),
+            D: group.querySelector(".optionD").value.trim()
+          };
+          const correctLetters = getSelectedValues(group.querySelector(".correct-option"));
+          const correctValues = correctLetters.map(letter => options[letter]); // ✅ This line is the fix!
+          const inputStyle = group.querySelector(".input-style").value;
+
+          question.options = options;
+          question.correct = correctValues;
+          question.input_style = inputStyle;
+        }
+
+        questions.push(question);
+      });
+
+      if (hasEmptyRequired) {
+        alert("Please fill in all required questions.");
+        return;
+      }
+
+      fetch("/create_form", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ title, questions })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Form created with ID: " + data.form_id);
+          window.location.href = "/admin_dashboard";
+        } else {
+          alert("Failed to create form: " + data.message);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error creating form.");
+      });
+    }
+  </script>
+</body>
+</html>
