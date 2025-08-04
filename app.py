@@ -38,16 +38,28 @@ def check_secret_code():
 def admin_login():
     data = request.get_json()
     if data.get('username') == ADMIN_USERNAME and data.get('password') == ADMIN_PASSWORD:
+        session['admin_logged_in'] = True
         return jsonify({"status": "success", "redirect": "/admin_dashboard"})
     return jsonify({"status": "fail"}), 401
 
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
 @app.route('/admin_dashboard')
 def admin_dashboard():
+    if not session.get('admin_logged_in'):
+        flash("Unauthorized access. Please log in.", "error")
+        return redirect(url_for('home'))
     return render_template("admin_dashboard.html")
 
 # ------------------------ FORM CREATION ------------------------
 @app.route('/create_form', methods=['GET', 'POST'])
 def create_form():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('home'))
+
     if request.method == 'POST':
         try:
             data = request.get_json()
@@ -157,6 +169,9 @@ def submit_form(form_id):
 # ------------------------ ADMIN VIEW ------------------------
 @app.route('/view_forms')
 def view_forms():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('home'))
+
     form_ids = []
     for filename in os.listdir(FORMS_DIR):
         if filename.endswith('.json'):
@@ -168,6 +183,9 @@ def view_forms():
 
 @app.route('/delete_form/<form_id>', methods=['POST'])
 def delete_form(form_id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('home'))
+
     path = os.path.join(FORMS_DIR, f'{form_id}.json')
     if os.path.exists(path):
         os.remove(path)
@@ -178,6 +196,9 @@ def delete_form(form_id):
 
 @app.route('/view_form_responses/<form_id>')
 def view_form_responses(form_id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('home'))
+
     form_path = os.path.join(FORMS_DIR, f"{form_id}.json")
     if not os.path.exists(form_path):
         return render_template("error.html", message="Form not found.")
@@ -201,6 +222,9 @@ def view_form_responses(form_id):
 
 @app.route('/delete_response/<form_id>/<response_id>', methods=['POST'])
 def delete_response(form_id, response_id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('home'))
+
     path = os.path.join(RESPONSES_DIR, f"{form_id}_{response_id}.json")
     if os.path.exists(path):
         os.remove(path)
