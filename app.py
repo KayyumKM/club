@@ -3,11 +3,17 @@ from flask_cors import CORS
 import uuid
 import json
 import os
+from functools import wraps
 
 # ------------------------ CONFIG ------------------------
 app = Flask(__name__)
 CORS(app)
 app.secret_key = os.getenv("SECRET_KEY", "defaultsecretkey")
+
+# Secure session configuration for production
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True  # Ensure HTTPS in production
 
 # Admin credentials and secret code (read from environment)
 SECRET_CODE = os.getenv("SECRET_CODE", "Amity@Cyber_2024")
@@ -20,8 +26,17 @@ RESPONSES_DIR = 'responses'
 os.makedirs(FORMS_DIR, exist_ok=True)
 os.makedirs(RESPONSES_DIR, exist_ok=True)
 
-# ------------------------ ROUTES ------------------------
+# ------------------------ DECORATORS ------------------------
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            flash("Unauthorized access. Please log in.", "error")
+            return redirect(url_for('home'))
+        return f(*args, **kwargs)
+    return decorated_function
 
+# ------------------------ ROUTES ------------------------
 @app.route('/')
 def home():
     return render_template("index.html")
@@ -38,6 +53,7 @@ def check_secret_code():
 def admin_login():
     data = request.get_json()
     if data.get('username') == ADMIN_USERNAME and data.get('password') == ADMIN_PASSWORD:
+        session.clear()
         session['admin_logged_in'] = True
         return jsonify({"status": "success", "redirect": "/admin_dashboard"})
     return jsonify({"status": "fail"}), 401
@@ -48,18 +64,14 @@ def logout():
     return redirect(url_for('home'))
 
 @app.route('/admin_dashboard')
+@admin_required
 def admin_dashboard():
-    if not session.get('admin_logged_in'):
-        flash("Unauthorized access. Please log in.", "error")
-        return redirect(url_for('home'))
     return render_template("admin_dashboard.html")
 
 # ------------------------ FORM CREATION ------------------------
 @app.route('/create_form', methods=['GET', 'POST'])
+@admin_required
 def create_form():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('home'))
-
     if request.method == 'POST':
         try:
             data = request.get_json()
@@ -107,6 +119,7 @@ def user_form(form_id):
         form_data = json.load(f)
     return render_template("user_form.html", form=form_data, questions=form_data.get("questions", []))
 
+# ------------------------ FORM SUBMISSION & SCORING ------------------------
 @app.route('/submit_form/<form_id>', methods=['POST'])
 def submit_form(form_id):
     form_path = os.path.join(FORMS_DIR, f"{form_id}.json")
@@ -131,8 +144,8 @@ def submit_form(form_id):
 
         if qtype == "mcq" and input_style == "checkbox":
             user_ans = form_answers.getlist(base_field)
-            answers[qid] = user_ans
             cleaned_user = sorted([a.strip().lower() for a in user_ans])
+            answers[qid] = user_ans
             if cleaned_user == sorted(correct):
                 score += marks
         elif qtype == "mcq":
@@ -142,8 +155,8 @@ def submit_form(form_id):
                 score += marks
         elif qtype == "checkbox":
             user_ans = form_answers.getlist(base_field)
-            answers[qid] = user_ans
             cleaned_user = sorted([a.strip().lower() for a in user_ans])
+            answers[qid] = user_ans
             if cleaned_user == sorted(correct):
                 score += marks
         elif qtype in ["short", "text"]:
@@ -151,7 +164,8 @@ def submit_form(form_id):
             answers[qid] = user_ans
             if user_ans in correct:
                 score += marks
-
+        else:
+            answers[qid] = "Unknown question type"
 
     response_id = str(uuid.uuid4())
     response_data = {
@@ -169,10 +183,8 @@ def submit_form(form_id):
 
 # ------------------------ ADMIN VIEW ------------------------
 @app.route('/view_forms')
+@admin_required
 def view_forms():
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('home'))
-
     form_ids = []
     for filename in os.listdir(FORMS_DIR):
         if filename.endswith('.json'):
@@ -183,10 +195,8 @@ def view_forms():
     return render_template('view_forms.html', forms=form_ids)
 
 @app.route('/delete_form/<form_id>', methods=['POST'])
+@admin_required
 def delete_form(form_id):
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('home'))
-
     path = os.path.join(FORMS_DIR, f'{form_id}.json')
     if os.path.exists(path):
         os.remove(path)
@@ -196,10 +206,8 @@ def delete_form(form_id):
     return redirect(url_for('view_forms'))
 
 @app.route('/view_form_responses/<form_id>')
+@admin_required
 def view_form_responses(form_id):
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('home'))
-
     form_path = os.path.join(FORMS_DIR, f"{form_id}.json")
     if not os.path.exists(form_path):
         return render_template("error.html", message="Form not found.")
@@ -222,10 +230,8 @@ def view_form_responses(form_id):
     return render_template("form_responses.html", form_id=form_id, questions=questions, responses=responses)
 
 @app.route('/delete_response/<form_id>/<response_id>', methods=['POST'])
+@admin_required
 def delete_response(form_id, response_id):
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('home'))
-
     path = os.path.join(RESPONSES_DIR, f"{form_id}_{response_id}.json")
     if os.path.exists(path):
         os.remove(path)
