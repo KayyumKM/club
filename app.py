@@ -146,29 +146,43 @@ def submit_form(form_id):
         base_field = f'question_{qid}'
         total += marks
 
+        # ----- MCQ with checkboxes -----
         if qtype == "mcq" and input_style == "checkbox":
             user_ans = form_answers.getlist(base_field)
+            cleaned_user = sorted([x.strip().lower() for x in user_ans if x.strip()])
+            cleaned_correct = sorted(correct)
             answers[qid] = user_ans
-            if sorted([x.strip().lower() for x in user_ans]) == sorted(correct):
+            if cleaned_user == cleaned_correct:
                 score += marks
+
+        # ----- MCQ with radio buttons -----
         elif qtype == "mcq":
             user_ans = form_answers.get(base_field, "").strip().lower()
             answers[qid] = user_ans
             if user_ans in correct:
                 score += marks
+
+        # ----- Generic checkbox (not MCQ) -----
         elif qtype == "checkbox":
             user_ans = form_answers.getlist(base_field)
+            cleaned_user = sorted([x.strip().lower() for x in user_ans if x.strip()])
+            cleaned_correct = sorted(correct)
             answers[qid] = user_ans
-            if sorted([x.strip().lower() for x in user_ans]) == sorted(correct):
+            if cleaned_user == cleaned_correct:
                 score += marks
+
+        # ----- Short/text answers -----
         elif qtype in ["short", "text"]:
             user_ans = form_answers.get(base_field, "").strip().lower()
             answers[qid] = user_ans
             if user_ans in correct:
                 score += marks
+
+        # ----- Unknown type -----
         else:
             answers[qid] = "Unknown question type"
 
+    # Save response
     response_id = str(uuid.uuid4())
     with open(os.path.join(RESPONSES_DIR, f"{form_id}_{response_id}.json"), 'w') as f:
         json.dump({
@@ -241,3 +255,4 @@ def delete_response(form_id, response_id):
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
