@@ -43,13 +43,12 @@
     {% if responses %}
         {% for response in responses %}
             <div class="response-block">
-          
                 <p><strong>Answers:</strong></p>
                 <div>
                     {% for qid, ans in response['answers'].items() %}
                         <p><strong>{{ qid }}:</strong>
-                            {% if ans is iterable and ans is not string %}
-                                {{ ", ".join(ans) }}
+                            {% if ans is iterable and not ans is string %}
+                                {{ ans | join(', ') }}
                             {% else %}
                                 {{ ans }}
                             {% endif %}
