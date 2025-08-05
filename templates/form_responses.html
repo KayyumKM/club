@@ -47,7 +47,7 @@
                 <div>
                     {% for qid, ans in response['answers'].items() %}
                         <p><strong>{{ qid }}:</strong>
-                            {% if ans is iterable and not ans is string %}
+                            {% if ans is sequence and ans is not string %}
                                 {{ ans | join(', ') }}
                             {% else %}
                                 {{ ans }}
