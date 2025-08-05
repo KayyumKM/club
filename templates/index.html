@@ -39,12 +39,25 @@
 
     .container {
       position: relative;
-      z-index: 1;
+      z-index: 2;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100%;
+    }
+
+    /* 🔵 Watermark logo behind text */
+    .watermark-logo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -60%);
+      width: 500px;
+      opacity: 0.04;
+      z-index: 1;
+      pointer-events: none;
+      user-select: none;
     }
 
     h1 {
@@ -55,6 +68,7 @@
       user-select: none;
       margin-bottom: 30px;
       transition: transform 0.2s ease;
+      z-index: 2;
     }
 
     h1:active {
@@ -65,6 +79,7 @@
       display: flex;
       gap: 10px;
       align-items: center;
+      z-index: 2;
     }
 
     .form-entry input {
@@ -139,7 +154,7 @@
       z-index: 9;
     }
 
-    /* ✅ Logo styles */
+    /* ✅ Logo top-right */
     .header {
       position: absolute;
       top: 20px;
@@ -158,8 +173,8 @@
   </style>
 </head>
 <body>
-  
-  <!-- ✅ Logo at top-right -->
+
+  <!-- ✅ Top-right Logo -->
   <div class="header">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Cybernetics Club Logo">
   </div>
@@ -168,6 +183,9 @@
   <div class="overlay" id="overlay"></div>
 
   <div class="container">
+    <!-- ✅ Watermark Logo Behind -->
+    <img src="{{ url_for('static', filename='logo.png') }}" class="watermark-logo" alt="Background Logo">
+
     <h1 id="secretTitle">Cybernetic Club</h1>
     <div class="form-entry">
       <input type="text" placeholder="Enter Form Number" id="formNumber">
@@ -189,7 +207,7 @@
     document.getElementById('secretTitle').addEventListener('click', () => {
       clickCount++;
       if (clickCount >= 5) {
-        clickCount = 0; // reset after showing prompt
+        clickCount = 0;
         const inputCode = prompt("Enter Secret Code:");
         if (inputCode === null) return;
 
@@ -220,7 +238,7 @@
     function submitAdminLogin() {
       const username = document.getElementById('adminUser').value;
       const password = document.getElementById('adminPass').value;
-	  
+
       fetch('/admin_login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -254,4 +272,3 @@
   </script>
 </body>
 </html>
-
