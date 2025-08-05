@@ -86,13 +86,22 @@
           {% if qtype == 'mcq' and options %}
             {% for key, option in options.items() %}
               <div class="option">
-                <input
-                  type="{{ input_style }}"
-                  id="{{ field_name }}_{{ loop.index }}"
-                  name="{{ field_name }}{% if input_style == 'checkbox' %}[]{% endif %}"
-                  value="{{ option }}"
-                  {% if input_style == 'radio' and required %}required{% endif %}
-                >
+                {% if input_style == 'checkbox' %}
+                  <input
+                    type="checkbox"
+                    id="{{ field_name }}_{{ loop.index }}"
+                    name="{{ field_name }}[]"
+                    value="{{ option }}"
+                  >
+                {% else %}
+                  <input
+                    type="radio"
+                    id="{{ field_name }}_{{ loop.index }}"
+                    name="{{ field_name }}"
+                    value="{{ option }}"
+                    {% if required %}required{% endif %}
+                  >
+                {% endif %}
                 <label for="{{ field_name }}_{{ loop.index }}">{{ option }}</label>
               </div>
             {% endfor %}
@@ -141,9 +150,7 @@
   function nextQuestion(index) {
     const currentQ = questions[index];
     const inputs = currentQ.querySelectorAll('input');
-    let valid = false;
 
-    // Required checkbox handling
     const checkboxRequired = currentQ.querySelector('.required-checkbox');
     if (checkboxRequired) {
       const name = checkboxRequired.dataset.name;
@@ -175,7 +182,6 @@
     }
   }
 
-  // Block Enter from submitting prematurely
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
